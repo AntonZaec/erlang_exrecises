@@ -1,11 +1,15 @@
 -module(calc).
--export([parse/1, compile/1, simulate/1]).
+-export([parse/1, compile/1, simulate/1, simplify/1]).
+
+simplify(Expression) ->
+	{exps, ExpressionData} = Expression,
+	{exps, simplify_impl(simplify_impl(ExpressionData))}.
 
 simulate(StackActions) ->
 	{stack_actions, Stack} = StackActions,
 	{Result, _} = simulate_impl(Stack),
 	Result.
-	
+
 compile(Expression) ->
 	{exps, ExpressionData} = Expression,
 	{stack_actions, compile_impl(ExpressionData, [])}.
@@ -15,9 +19,60 @@ parse(String) ->
 	{Result, _} = parse_impl(Tokens, {}),
 	{exps, Result}.
 
+simplify_impl({number, Value}) ->
+	{number, Value};
+simplify_impl({unary_minus, Expression}) ->
+	SimplifiedExpression = simplify_impl(Expression),
+	case SimplifiedExpression of
+		{number, 0} -> {number, 0};
+		{number, Value} -> {number, -Value};
+		_ -> {unary_minus, SimplifiedExpression}
+	end;
+simplify_impl({Operator, Operand1, Operand2}) ->
+	SimplifiedOperand1 = simplify_impl(Operand1),
+	SimplifiedOperand2 = simplify_impl(Operand2),
+	simplify_operation({Operator, SimplifiedOperand1, SimplifiedOperand2}).
+
+simplify_operation({minus, Operand1, Operand2}) ->
+	case {Operand1, Operand2} of
+		{{number, 0}, {number, 0}} -> {number, 0};
+		{{number, 0}, _} -> {unary_minus, Operand2};
+		{_, {number, 0}} -> Operand1;
+		_ -> {minus, Operand1, Operand2}
+	end;
+simplify_operation({plus, Operand1, Operand2}) ->
+	case {Operand1, Operand2} of
+		{{number, 0}, {number, 0}} -> {number, 0};
+		{{number, 0}, _} -> Operand2;
+		{_, {number, 0}} -> Operand1;
+		_ -> {plus, Operand1, Operand2}
+	end;
+simplify_operation({multiply, Operand1, Operand2}) ->
+	case {Operand1, Operand2} of
+		{{number, 0}, _} -> {number, 0};
+		{_, {number, 0}} -> {number, 0};
+		{{number, 1}, {number, 1}} -> 1;
+		{{number, 1}, _} -> Operand2;
+		{_, {number, 1}} -> Operand1;
+		{{number, -1}, {number, -1}} -> {number, 1};
+		{{number, -1}, _} -> {unary_minus, Operand2};
+		{_, {number, -1}} -> {unary_minus, Operand1};
+		_ -> {multiply, Operand1, Operand2}
+	end;
+simplify_operation({division, Operand1, Operand2}) ->
+	case {Operand1, Operand2} of
+		{_, {number, 0}} -> {division, Operand1, Operand2};
+		{{number, 0}, _} -> {number, 0};
+		{{number, 1}, {number, 1}} -> {number, 1};
+		{_, {number, 1}} -> Operand1;
+		{{number, -1}, {number, -1}} -> {number, 1};
+		{_, {number, -1}} -> {unary_minus, Operand1};
+		_ -> {division, Operand1, Operand2}
+	end.
+
 simulate_impl([H|T]) when is_number(H)->
 	{H, T};
-simulate_impl([H|T]) ->	
+simulate_impl([H|T]) ->
 	case H of
 		unary_minus -> 
 			{Operand, NewStack} = simulate_impl(T),
@@ -25,7 +80,7 @@ simulate_impl([H|T]) ->
 		_ -> 
 			{Operand2, NewStack} = simulate_impl(T),
 			{Operand1, NewStack2} = simulate_impl(NewStack),
-			{do_binary_operation(H, Operand1, Operand2), NewStack}
+			{do_binary_operation(H, Operand1, Operand2), NewStack2}
 	end.
 
 do_unary_operation(Operation, Operand) when Operation =:= unary_minus ->

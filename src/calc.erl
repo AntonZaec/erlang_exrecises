@@ -1,11 +1,25 @@
 -module(calc).
--export([parse/1]).
+-export([parse/1, compile/1]).
+
+compile(Expression) ->
+	{exps, ExpressionData} = Expression,
+	compile_impl(ExpressionData, []).
 
 parse(String) ->
 	Tokens = tokenize(String),
 	{Result, _} = parse_impl(Tokens, {}),
-	Result.
+	{exps, Result}.
 
+compile_impl(Expression, Stack) ->
+	NewStack = case Expression of 
+		{number, Value} -> [Value|Stack];
+		{Operator, Operand1} -> 
+			[Operator|compile_impl(Operand1, Stack)];
+		{Operator, Operand1, Operand2} -> 
+			[Operator|compile_impl(Operand2, compile_impl(Operand1, Stack))]
+	end,
+	NewStack.
+	
 tokenize([]) ->
 	[];
 tokenize([H|T]) ->

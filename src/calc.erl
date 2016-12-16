@@ -30,23 +30,13 @@ parse_impl(Tokens, Result) ->
 		[{operator, open_bracket}|T] -> 
 			{SubResult, NextTokens} = parse_impl(T, {}),
 			{SubResult, NextTokens, true};
-		[{_, close_bracket}|T] -> {Result, T, true};
-		[{number, Operand1}, {operator, Operator}, {number, Operand2}|T] -> 
-			SubResult = {Operator, {number, Operand1}, {number, Operand2}},
-			{SubResult, T, false};
-		[{number, Operand1}, {operator, Operator}, {operator, open_bracket}|T] -> 
-			NextBracket = [{operator, open_bracket}|T],
-			{NextBracketResult, NextTokens} = parse_impl(NextBracket, {}),
-			SubResult = {Operator, {number, Operand1}, NextBracketResult},
-			{SubResult, NextTokens, false};
-		[{operator, Operator}, {number, Operand2}|T] -> 
-			SubResult = {Operator, Result, {number, Operand2}},
-			{SubResult, T, false};
-		[{operator, Operator}, {operator, open_bracket}|T] ->
-			NextBracket = [{operator, open_bracket}|T],
-			{RightSubResult, NextTokens} = parse_impl(NextBracket, {}),
+		[{operator, close_bracket}|T] -> {Result, T, false};
+		[{operator, Operator}|T] ->
+			{RightSubResult, NextTokens} = parse_impl(T, {}),
 			SubResult = {Operator, Result, RightSubResult},
-			{SubResult, NextTokens, false}
+			{SubResult, NextTokens, false};
+		[{number, Operand}|T] ->
+			{{number, Operand}, T, true}
 	end,
 	case MustContinue of
 		true -> parse_impl(NewNextTokens, NewResult);

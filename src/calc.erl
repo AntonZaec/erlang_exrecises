@@ -72,16 +72,13 @@ simplify_operation({division, Operand1, Operand2}) ->
 
 simulate_impl([H|T]) when is_number(H)->
 	{H, T};
+simulate_impl([unary_minus|T]) ->
+	{Operand, NewStack} = simulate_impl(T),
+	{do_unary_operation(unary_minus, Operand), NewStack};
 simulate_impl([H|T]) ->
-	case H of
-		unary_minus -> 
-			{Operand, NewStack} = simulate_impl(T),
-			{do_unary_operation(unary_minus, Operand), NewStack};
-		_ -> 
-			{Operand2, NewStack} = simulate_impl(T),
-			{Operand1, NewStack2} = simulate_impl(NewStack),
-			{do_binary_operation(H, Operand1, Operand2), NewStack2}
-	end.
+	{Operand2, NewStack} = simulate_impl(T),
+	{Operand1, NewStack2} = simulate_impl(NewStack),
+	{do_binary_operation(H, Operand1, Operand2), NewStack2}.
 
 do_unary_operation(Operation, Operand) when Operation =:= unary_minus ->
 	-Operand.

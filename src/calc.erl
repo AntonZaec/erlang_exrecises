@@ -1,14 +1,43 @@
 -module(calc).
--export([parse/1, compile/1]).
+-export([parse/1, compile/1, simulate/1]).
 
+simulate(StackActions) ->
+	{stack_actions, Stack} = StackActions,
+	{Result, _} = simulate_impl(Stack),
+	Result.
+	
 compile(Expression) ->
 	{exps, ExpressionData} = Expression,
-	compile_impl(ExpressionData, []).
+	{stack_actions, compile_impl(ExpressionData, [])}.
 
 parse(String) ->
 	Tokens = tokenize(String),
 	{Result, _} = parse_impl(Tokens, {}),
 	{exps, Result}.
+
+simulate_impl([H|T]) when is_number(H)->
+	{H, T};
+simulate_impl([H|T]) ->	
+	case H of
+		unary_minus -> 
+			{Operand, NewStack} = simulate_impl(T),
+			{do_unary_operation(unary_minus, Operand), NewStack};
+		_ -> 
+			{Operand2, NewStack} = simulate_impl(T),
+			{Operand1, NewStack2} = simulate_impl(NewStack),
+			{do_binary_operation(H, Operand1, Operand2), NewStack}
+	end.
+
+do_unary_operation(Operation, Operand) when Operation =:= unary_minus ->
+	-Operand.
+
+do_binary_operation(Operation, Operand1, Operand2) -> 
+	case Operation of
+		plus -> Operand1 + Operand2;
+		minus -> Operand1 - Operand2;
+		multiply -> Operand1*Operand2;
+		division -> Operand1/Operand2
+	end.
 
 compile_impl(Expression, Stack) ->
 	NewStack = case Expression of 

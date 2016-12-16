@@ -120,6 +120,13 @@ parse_impl([], Result) -> {Result, []};
 parse_impl(Tokens, Result) ->
 	{NewResult, NewNextTokens, MustContinue} = case Tokens of
 		[{operator, unary_minus},{operator, open_bracket}|T] -> 
+			%This case is needed for parsing expressions like "(~(1+2)-3)".
+			%If we don't think about unary minus and bracket as one symbol
+			%we would have a problem with recursion level. 
+			%I don't know another way to solve this problem.
+			{SubResult, NextTokens} = parse_impl(T, {}),
+			{{unary_minus, SubResult}, NextTokens, true};
+		[{operator, unary_minus}|T] -> 
 			{SubResult, NextTokens} = parse_impl(T, {}),
 			{{unary_minus, SubResult}, NextTokens, true};
 		[{operator, open_bracket}|T] -> 

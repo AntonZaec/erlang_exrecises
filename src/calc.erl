@@ -1,5 +1,9 @@
 -module(calc).
--export([parse/1, compile/1, simulate/1, simplify/1]).
+-export([parse/1, compile/1, simulate/1, simplify/1, compute/1]).
+
+compute(Expression) ->
+	{exps, ExpressionData} = Expression,
+	compute_impl(ExpressionData).
 
 simplify(Expression) ->
 	{exps, ExpressionData} = Expression,
@@ -18,6 +22,16 @@ parse(String) ->
 	Tokens = tokenize(String),
 	{Result, _} = parse_impl(Tokens, {}),
 	{exps, Result}.
+
+compute_impl({number, Number}) ->
+	Number;
+compute_impl({unary_minus, Expression}) ->
+	Operand = compute_impl(Expression),
+	do_unary_operation(unary_minus, Operand);
+compute_impl({Operator, LeftExpression, RightExpression}) ->
+	Operand1 = compute_impl(LeftExpression),
+	Operand2 = compute_impl(RightExpression),
+	do_binary_operation(Operator, Operand1, Operand2).
 
 simplify_impl({number, Value}) ->
 	{number, Value};

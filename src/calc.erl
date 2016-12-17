@@ -154,15 +154,20 @@ tokenize([]) ->
 tokenize([H|T]) ->
 	State = if 
 			H >= $0 andalso H =< $9 -> read_number;
+			H >= $A andalso H =< $z -> read_string;
 			true -> read_operator
 		end,
 	String = [H|T],
-	case State of
-		read_operator -> [{operator, get_operator_name(H)}|tokenize(T)];
-		read_number -> Number = list_to_integer(extrude_number(String)),
-						StringWithoutNumber = remove_number(String),
-						[{number, Number}|tokenize(StringWithoutNumber)]
-	end.
+	{NewToken, NextCharacters} = case State of
+		read_operator -> {{operator, get_operator_name(H)}, T};
+		read_number -> 
+			{Number, StringWithoutNumber} = extrude_number(String, ""),
+			{{number, Number}, StringWithoutNumber};
+		read_string -> 
+			{NewString, NextCharactersTmp} = extrude_string(String, ""),
+			{convert_str_to_token(NewString), NextCharactersTmp}
+	end,
+	[NewToken|tokenize(NextCharacters)].
 
 parse_impl([], Result) -> {Result, []};
 parse_impl(Tokens, Result) ->
@@ -212,12 +217,19 @@ get_operator_str(Operator) ->
 		division -> "/"
 	end.	
 
-extrude_number([H|T]) when H >= $0 andalso H =< $9 ->
-	[H|extrude_number(T)];
-extrude_number(_) ->
-	[].
+extrude_string([H|T], Acc) when H >= $A andalso H =< $z ->
+	extrude_string(T, [H|Acc]);
+extrude_string(L, Acc) ->
+	{lists:reverse(Acc), L}.
 
-remove_number([H|T]) when H >= $0 andalso H =< $9 ->
-	remove_number(T);
-remove_number(L) ->
-	L.
+convert_str_to_token("if") ->
+	{keyword, 'if'};
+convert_str_to_token("then") ->
+	{keyword, 'then'};
+convert_str_to_token("else") ->
+	{keyword, 'else'}.
+
+extrude_number([H|T], Acc) when H >= $0 andalso H =< $9 ->
+	extrude_number(T, [H|Acc]);
+extrude_number(L, Acc) ->
+	{list_to_integer(lists:reverse(Acc)), L}.

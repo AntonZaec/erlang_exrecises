@@ -162,9 +162,8 @@ parse_impl(Tokens, Result) ->
 			%I don't know another way to solve this problem.
 			{SubResult, NextTokens} = parse_impl(T, {}),
 			{{unary_minus, SubResult}, NextTokens, true};
-		[{operator, unary_minus}|T] -> 
-			{SubResult, NextTokens} = parse_impl(T, {}),
-			{{unary_minus, SubResult}, NextTokens, true};
+		[{operator, unary_minus}, {number, Operand}|T] -> 
+			{{unary_minus, {number, Operand}}, T, true};
 		[{operator, open_bracket}|T] -> 
 			{SubResult, NextTokens} = parse_impl(T, {}),
 			{SubResult, NextTokens, true};

@@ -155,6 +155,7 @@ tokenize([H|T]) ->
 	State = if 
 			H >= $0 andalso H =< $9 -> read_number;
 			H >= $A andalso H =< $z -> read_string;
+			H =:= 32 -> skip_space;
 			true -> read_operator
 		end,
 	String = [H|T],
@@ -165,13 +166,29 @@ tokenize([H|T]) ->
 			{{number, Number}, StringWithoutNumber};
 		read_string -> 
 			{NewString, NextCharactersTmp} = extrude_string(String, ""),
-			{convert_str_to_token(NewString), NextCharactersTmp}
+			{convert_str_to_token(NewString), NextCharactersTmp};
+		skip_space -> {none, T}
 	end,
-	[NewToken|tokenize(NextCharacters)].
+	case State of
+		skip_space -> tokenize(T);
+		_ -> [NewToken|tokenize(NextCharacters)]
+	end.
 
 parse_impl([], Result) -> {Result, []};
 parse_impl(Tokens, Result) ->
 	{NewResult, NewNextTokens, MustContinue} = case Tokens of
+		[{keyword, 'if'}, {operator, open_bracket}|IfExpressionTokens] ->
+			{SubResultAfterIf, NextTokensAfterIf} = 
+				parse_impl(IfExpressionTokens, {}),
+			[{keyword, 'then'}, {operator, open_bracket}|ThenExpressionTokens] = 
+				NextTokensAfterIf,
+			{SubResultAfterThen, NextTokensAfterThen} = 
+				parse_impl(ThenExpressionTokens, {}),
+			[{keyword, 'else'}|ElseExpressionTokens] = NextTokensAfterThen,
+			{SubResultAfterElse, NextTokensAfterElse} = 
+				parse_impl(ElseExpressionTokens, {}),
+			{{if_then_else, SubResultAfterIf, SubResultAfterThen, SubResultAfterElse},
+				NextTokensAfterElse, false};
 		[{operator, unary_minus},{operator, open_bracket}|T] -> 
 			%This case is needed for parsing expressions like "(~(1+2)-3)".
 			%If we don't think about unary minus and bracket as one symbol
@@ -179,8 +196,9 @@ parse_impl(Tokens, Result) ->
 			%I don't know another way to solve this problem.
 			{SubResult, NextTokens} = parse_impl(T, {}),
 			{{unary_minus, SubResult}, NextTokens, true};
-		[{operator, unary_minus}, {number, Operand}|T] -> 
-			{{unary_minus, {number, Operand}}, T, true};
+		[{operator, unary_minus}|T] -> 
+			{SubResult, NextTokens} = parse_impl(T, {}),
+			{{unary_minus, SubResult}, NextTokens, true};
 		[{operator, open_bracket}|T] -> 
 			{SubResult, NextTokens} = parse_impl(T, {}),
 			{SubResult, NextTokens, true};

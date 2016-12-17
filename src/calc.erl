@@ -1,32 +1,36 @@
 -module(calc).
--export([parse/1, compile/1, simulate/1, simplify/1, compute/1, print/1]).
+-export([parse/1, compute/1, print/1, 
+	compile/1, simulate/1, simplify/1, eval/1]).
+
+parse(String) ->
+	Tokens = tokenize(String),
+	{Result, _} = parse_impl(Tokens, {}),
+	{exps, Result}.
+
+compute(Expression) ->
+	{exps, ExpressionData} = Expression,
+	compute_impl(ExpressionData).
 
 print(Expression) ->
 	{exps, ExpressionData} = Expression,
 	print_impl(ExpressionData),
 	io:format("~n").
 
-compute(Expression) ->
+compile(Expression) ->
 	{exps, ExpressionData} = Expression,
-	compute_impl(ExpressionData).
-
-simplify(Expression) ->
-	{exps, ExpressionData} = Expression,
-	{exps, simplify_impl(simplify_impl(ExpressionData))}.
+	{stack_actions, compile_impl(ExpressionData, [])}.
 
 simulate(StackActions) ->
 	{stack_actions, Stack} = StackActions,
 	{Result, _} = simulate_impl(Stack),
 	Result.
 
-compile(Expression) ->
+simplify(Expression) ->
 	{exps, ExpressionData} = Expression,
-	{stack_actions, compile_impl(ExpressionData, [])}.
+	{exps, simplify_impl(simplify_impl(ExpressionData))}.
 
-parse(String) ->
-	Tokens = tokenize(String),
-	{Result, _} = parse_impl(Tokens, {}),
-	{exps, Result}.
+eval(String) ->
+	compute(simplify(parse(String))).
 
 print_impl({number, Number}) ->
 	io:format("~B", [Number]);

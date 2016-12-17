@@ -1,5 +1,10 @@
 -module(calc).
--export([parse/1, compile/1, simulate/1, simplify/1, compute/1]).
+-export([parse/1, compile/1, simulate/1, simplify/1, compute/1, print/1]).
+
+print(Expression) ->
+	{exps, ExpressionData} = Expression,
+	print_impl(ExpressionData),
+	io:format("~n").
 
 compute(Expression) ->
 	{exps, ExpressionData} = Expression,
@@ -22,6 +27,19 @@ parse(String) ->
 	Tokens = tokenize(String),
 	{Result, _} = parse_impl(Tokens, {}),
 	{exps, Result}.
+
+print_impl({number, Number}) ->
+	io:format("~B", [Number]);
+print_impl({Operator, Operand}) ->
+	io:format("(~s", [get_operator_str(Operator)]),
+	print_impl(Operand),
+	io:format(")");
+print_impl({Operator, Operand1, Operand2}) ->
+	io:format("("),
+	print_impl(Operand1),
+	io:format("~s", [get_operator_str(Operator)]),
+	print_impl(Operand2),
+	io:format(")").
 
 compute_impl({number, Number}) ->
 	Number;
@@ -168,6 +186,15 @@ get_operator_name(OpChar) ->
 		$/ -> division;
 		$( -> open_bracket;
 		$) -> close_bracket
+	end.	
+
+get_operator_str(Operator) ->
+	case Operator of
+		plus -> "+";
+		unary_minus -> "~";
+		minus -> "-";
+		multiply -> "*";
+		division -> "/"
 	end.	
 
 extrude_number([H|T]) when H >= $0 andalso H =< $9 ->

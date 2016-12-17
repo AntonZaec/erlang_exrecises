@@ -2,33 +2,45 @@
 -export([parse/1, compute/1, print/1, 
 	compile/1, simulate/1, simplify/1, eval/1]).
 
+%% Parsing of string with arithmetic expression. Brackets are required.
+%% For example:
+%% {exps, {unary_minus, {SubExpression}}} = parse("~(1+(3+((4+5)*7))").
 parse(String) ->
 	Tokens = tokenize(String),
 	{Result, _} = parse_impl(Tokens, {}),
 	{exps, Result}.
 
+%% Computing result of parsing function.
 compute(Expression) ->
 	{exps, ExpressionData} = Expression,
 	compute_impl(ExpressionData).
 
+%% Printing result of parsing function.
 print(Expression) ->
 	{exps, ExpressionData} = Expression,
 	print_impl(ExpressionData),
 	io:format("~n").
 
+%% Transformation of parsing result to stack form 
+%% (reverse polish notation).
 compile(Expression) ->
 	{exps, ExpressionData} = Expression,
 	{stack_actions, compile_impl(ExpressionData, [])}.
 
+%% Simulation of compilation result.
+%% compute(parse("(1+2)")) =:= simulate(compile(parse("(1+2)"))).
 simulate(StackActions) ->
 	{stack_actions, Stack} = StackActions,
 	{Result, _} = simulate_impl(Stack),
 	Result.
 
+%% Simplification of parsing result.
+%% For example, "(3+0)*1" will be "3".
 simplify(Expression) ->
 	{exps, ExpressionData} = Expression,
 	{exps, simplify_impl(simplify_impl(ExpressionData))}.
 
+%% Evaluate computing of expression in string.
 eval(String) ->
 	compute(simplify(parse(String))).
 

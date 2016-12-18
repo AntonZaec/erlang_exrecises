@@ -65,7 +65,7 @@ print_impl({if_then_else, Operand1, Operand2, Operand3}) ->
 	print_impl(Operand2),
 	io:format(" else "),
 	print_impl(Operand3).
-	
+
 compute_impl({number, Number}) ->
 	Number;
 compute_impl({unary_minus, Expression}) ->
@@ -91,6 +91,15 @@ simplify_impl({unary_minus, Expression}) ->
 		{number, Value} -> {number, -Value};
 		_ -> {unary_minus, SimplifiedExpression}
 	end;
+simplify_impl({if_then_else, Operand1, Operand2, Operand3}) ->
+	SimplifiedOperand1 = simplify_impl(Operand1),
+	case SimplifiedOperand1 of
+		{number, 0} -> simplify_impl(Operand3);
+		{number, _} -> simplify_impl(Operand2);
+		_ -> 
+			{if_then_else, SimplifiedOperand1, 
+				simplify_impl(Operand2), simplify_impl(Operand3)}
+	end;
 simplify_impl({Operator, Operand1, Operand2}) ->
 	SimplifiedOperand1 = simplify_impl(Operand1),
 	SimplifiedOperand2 = simplify_impl(Operand2),
@@ -114,7 +123,7 @@ simplify_operation({multiply, Operand1, Operand2}) ->
 	case {Operand1, Operand2} of
 		{{number, 0}, _} -> {number, 0};
 		{_, {number, 0}} -> {number, 0};
-		{{number, 1}, {number, 1}} -> 1;
+		{{number, 1}, {number, 1}} -> {number, 1};
 		{{number, 1}, _} -> Operand2;
 		{_, {number, 1}} -> Operand1;
 		{{number, -1}, {number, -1}} -> {number, 1};
@@ -138,10 +147,29 @@ simulate_impl([H|T]) when is_number(H)->
 simulate_impl([unary_minus|T]) ->
 	{Operand, NewStack} = simulate_impl(T),
 	{do_unary_operation(unary_minus, Operand), NewStack};
+simulate_impl([if_then_else|T]) ->
+	{Operand1, NewStack} = simulate_impl(T),
+	case Operand1 of
+		0 -> simulate_impl(unroll_stack(NewStack));
+		_ -> 
+			{ThenResult, StackWithElse} = simulate_impl(NewStack),
+			StackWithoutElse = unroll_stack(StackWithElse),
+			{ThenResult, StackWithoutElse}
+	end;
 simulate_impl([H|T]) ->
 	{Operand2, NewStack} = simulate_impl(T),
 	{Operand1, NewStack2} = simulate_impl(NewStack),
 	{do_binary_operation(H, Operand1, Operand2), NewStack2}.
+
+unroll_stack([H|T]) when is_number(H)-> T;
+unroll_stack([unary_minus|T]) -> unroll_stack(T);
+unroll_stack([if_then_else|T]) ->
+	%Unroll three operands
+	unroll_stack(unroll_stack(unroll_stack(T)));
+unroll_stack([_|T]) ->
+	%Unroll two operands
+	unroll_stack(unroll_stack(T));
+unroll_stack([]) -> [].
 
 do_unary_operation(Operation, Operand) when Operation =:= unary_minus ->
 	-Operand.
@@ -154,15 +182,15 @@ do_binary_operation(Operation, Operand1, Operand2) ->
 		division -> Operand1/Operand2
 	end.
 
-compile_impl(Expression, Stack) ->
-	NewStack = case Expression of 
-		{number, Value} -> [Value|Stack];
-		{Operator, Operand1} -> 
-			[Operator|compile_impl(Operand1, Stack)];
-		{Operator, Operand1, Operand2} -> 
-			[Operator|compile_impl(Operand2, compile_impl(Operand1, Stack))]
-	end,
-	NewStack.
+compile_impl({number, Value}, Stack) ->
+	[Value|Stack];
+compile_impl({Operator, Operand1}, Stack) ->
+	[Operator|compile_impl(Operand1, Stack)];
+compile_impl({Operator, Operand1, Operand2}, Stack) ->
+	[Operator|compile_impl(Operand2, compile_impl(Operand1, Stack))];
+compile_impl({if_then_else, Operand1, Operand2, Operand3}, Stack) ->
+	[if_then_else|compile_impl(Operand1, 
+		compile_impl(Operand2, compile_impl(Operand3, Stack)))].
 	
 tokenize([]) ->
 	[];

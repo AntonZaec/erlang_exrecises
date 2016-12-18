@@ -78,8 +78,8 @@ compute_impl({Operator, LeftExpression, RightExpression}) ->
 compute_impl({if_then_else, Expression1, Expression2, Expression3}) ->
 	Operand1 = compute_impl(Expression1),
 	case Operand1 of
-		0 -> compute_impl(Expression2);
-		_ -> compute_impl(Expression3)
+		0 -> compute_impl(Expression3);
+		_ -> compute_impl(Expression2)
 	end.
 
 simplify_impl({number, Value}) ->
@@ -150,11 +150,11 @@ simulate_impl([unary_minus|T]) ->
 simulate_impl([if_then_else|T]) ->
 	{Operand1, NewStack} = simulate_impl(T),
 	case Operand1 of
-		0 -> simulate_impl(unroll_stack(NewStack));
-		_ -> 
+		0 ->
 			{ThenResult, StackWithElse} = simulate_impl(NewStack),
 			StackWithoutElse = unroll_stack(StackWithElse),
-			{ThenResult, StackWithoutElse}
+			{ThenResult, StackWithoutElse}; 
+		_ -> simulate_impl(unroll_stack(NewStack))
 	end;
 simulate_impl([H|T]) ->
 	{Operand2, NewStack} = simulate_impl(T),

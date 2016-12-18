@@ -5,6 +5,8 @@
 %% Parsing of string with arithmetic expression. Brackets are required.
 %% For example:
 %% {exps, {unary_minus, {SubExpression}}} = parse("~(1+(3+((4+5)*7))").
+%% if statement is allowed.
+%% For example: "(1+(if (2-1) then (3+4) else (5-6)))"
 parse(String) ->
 	Tokens = tokenize(String),
 	{Result, _} = parse_impl(Tokens, {}),
@@ -65,7 +67,13 @@ compute_impl({unary_minus, Expression}) ->
 compute_impl({Operator, LeftExpression, RightExpression}) ->
 	Operand1 = compute_impl(LeftExpression),
 	Operand2 = compute_impl(RightExpression),
-	do_binary_operation(Operator, Operand1, Operand2).
+	do_binary_operation(Operator, Operand1, Operand2);
+compute_impl({if_then_else, Expression1, Expression2, Expression3}) ->
+	Operand1 = compute_impl(Expression1),
+	case Operand1 of
+		0 -> compute_impl(Expression2);
+		_ -> compute_impl(Expression3)
+	end.
 
 simplify_impl({number, Value}) ->
 	{number, Value};

@@ -57,8 +57,15 @@ print_impl({Operator, Operand1, Operand2}) ->
 	print_impl(Operand1),
 	io:format("~s", [get_operator_str(Operator)]),
 	print_impl(Operand2),
-	io:format(")").
-
+	io:format(")");
+print_impl({if_then_else, Operand1, Operand2, Operand3}) ->
+	io:format("if "),
+	print_impl(Operand1),
+	io:format(" then "),
+	print_impl(Operand2),
+	io:format(" else "),
+	print_impl(Operand3).
+	
 compute_impl({number, Number}) ->
 	Number;
 compute_impl({unary_minus, Expression}) ->

@@ -1,17 +1,57 @@
 -module(db).
--export([new/0, destroy/1, write/3, delete/2, read/2, match/2]).
+-export([new/0, destroy/1, write/3, delete/2, read/2, match/2, loop/1]).
 
-new() -> [].
+new() -> spawn(db, loop, [[]]).
 
-destroy(Db) -> ok.
+destroy(DbPid) -> 
+	rpc({self(), destroy_action}, DbPid).
 
-write(Key, Element, Db) -> write_private(Key, Element, Db).
+write(Key, Element, DbPid) -> 
+	rpc({self(), write_action, Key, Element}, DbPid).
 
-delete(Key, Db) -> delete_private(Key, Db).
+delete(Key, DbPid) -> 
+	rpc({self(), delete_action, Key}, DbPid).
 
-read(Key, Db) -> read_private(Key, Db).
+read(Key, DbPid) -> 
+	rpc({self(), read_action, Key}, DbPid).
 
-match(Element, Db) -> match_private(Element, Db).
+match(Element, DbPid) -> 
+	rpc({self(), match_action, Element}, DbPid).
+
+rpc(Message, DbPid) -> 
+	IsDbAlive = erlang:is_process_alive(DbPid),
+	case IsDbAlive of
+		true ->
+			DbPid ! Message,
+			receive
+				Res -> Res
+			after 
+				1000 -> {error, timeout}
+			end;
+		false -> {error, db_process_died}
+	end.
+	
+loop(Db) ->
+	NewDb = receive
+		{From, write_action, Key, Element} -> 
+			DbAfterWriting = write_private(Key, Element, Db),
+			From ! ok,
+			DbAfterWriting;
+		{From, read_action, Key} -> 
+			From ! read_private(Key, Db),
+			Db;
+		{From, delete_action, Key} -> 
+			DbAfterDeleting = delete_private(Key, Db),
+			From ! ok,
+			DbAfterDeleting;
+		{From, match_action, Element} -> 
+			From ! match_private(Element, Db),
+			Db;
+		{From, destroy_action} -> 
+			From ! ok,
+			[]
+	end,
+	loop(NewDb).
 
 write_private(Key, Element, []) -> [{Key, Element}];
 write_private(Key, Element, [{HeadKey, HeadElement}|T]) when Key > HeadKey ->

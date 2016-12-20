@@ -2,68 +2,64 @@
 -include_lib("eunit/include/eunit.hrl").
 -import(db, [new/0, destroy/1, write/3, delete/2, read/2, match/2]).
 
-new_test() ->
-	?assert(new() =:= []).
-
 write_one_test() ->
 	Db = new(),
-	Db2 = write("A", "record1", Db),
-	?assert(Db2 =:= [{"A", "record1"}]).
+	?assert(write("A", "record1", Db) =:= ok),
+	?assert(read("A", Db) =:= {ok, "record1"}).
 write_two_test() ->
 	Db = new(),
-	Db2 = write("A", "record1", Db),
-	?assert(Db2 =:= [{"A", "record1"}]),
-	Db3 = write("B", "record2", Db2),
-	?assert(Db3 =:= [{"A", "record1"}, {"B", "record2"}]).
+	?assert(write("A", "record1", Db) =:= ok),
+	?assert(read("A", Db) =:= {ok, "record1"}),
+	?assert(write("B", "record2", Db) =:= ok),
+	?assert(read("A", Db) =:= {ok, "record1"}),
+	?assert(read("B", Db) =:= {ok, "record2"}).
 write_existing_test() ->
 	Db = new(),
-	Db2 = write("A", "record1", Db),
-	Db3 = write("B", "record2", Db2),
-	Db4 = write("A", "record3", Db3),
-	?assert(Db4 =:= [{"A", "record3"}, {"B", "record2"}]).
-
+	?assert(write("A", "record1", Db) =:= ok),
+	?assert(write("B", "record2", Db) =:= ok),
+	?assert(write("A", "record3", Db) =:= ok),
+	?assert(read("A", Db) =:= {ok, "record3"}),
+	?assert(read("B", Db) =:= {ok, "record2"}).
+write_after_death_test() ->
+	Db = new(),
+	exit(Db, error),
+	?assert(is_process_alive(Db) =:= false),
+	?assert(write("A", "record1", Db) =:= {error, db_process_died}).
 deleting_one_test() ->
 	Db = new(),
-	Db2 = write("A", "record1", Db),
-	?assert(delete("A", Db2) =:= []).
-
+	write("A", "record1", Db),
+	?assert(delete("A", Db) =:= ok),
+	?assert(read("A", Db) =:= {error, instance}).
 deleting_first_test() ->
 	Db = new(),
-	Db2 = write("A", "record1", Db),
-	Db3 = write("B", "record2", Db2),
-	?assert(delete("A", Db3) =:= [{"B", "record2"}]).
-
+	write("A", "record1", Db),
+	write("B", "record2", Db),
+	?assert(delete("A", Db) =:= ok),
+	?assert(read("A", Db) =:= {error, instance}),
+	?assert(read("B", Db) =:= {ok, "record2"}).
 deleting_last_test() ->
 	Db = new(),
-	Db2 = write("A", "record1", Db),
-	Db3 = write("B", "record2", Db2),
-	?assert(delete("B", Db3) =:= [{"A", "record1"}]).
-
+	write("A", "record1", Db),
+	write("B", "record2", Db),
+	?assert(delete("B", Db) =:= ok),
+	?assert(read("B", Db) =:= {error, instance}),
+	?assert(read("A", Db) =:= {ok, "record1"}).
 deleting_middle_test() -> 
 	Db = new(),
-	Db2 = write("A", "record1", Db),
-	Db3 = write("B", "record2", Db2),
-	Db4 = write("C", "record3", Db3),
-	?assert(delete("B", Db4) =:= [{"A", "record1"}, {"C", "record3"}]).
-
-reading_existing_test() ->
-	Db = new(),
-	Db2 = write("A", "record1", Db),
-	?assert(read("A", Db2) =:= {ok, "record1"}).
-
-reading_not_existing_test() ->
-	Db = new(),
-	Db2 = write("A", "record1", Db),
-	?assert(read("B", Db2) =:= {error, instance}).
-
+	write("A", "record1", Db),
+	write("B", "record2", Db),
+	write("C", "record3", Db),
+	?assert(delete("B", Db) =:= ok),
+	?assert(read("B", Db) =:= {error, instance}),
+	?assert(read("A", Db) =:= {ok, "record1"}),
+	?assert(read("C", Db) =:= {ok, "record3"}).
 empty_matching_test() ->
 	Db = new(),
-	Db2 = write("A", "record1", Db),
-	?assert(match("record2", Db2) =:= []).
-
+	write("A", "record1", Db),
+	?assert(match("record2", Db) =:= []).
 matching_test() ->
 	Db = new(),
-	Db2 = write("A", "record1", Db),
-	Db3 = write("B", "record2", Db2),
-	Db4 = write("C", "record1", Db3),
-	?assert(match("record1", Db4) =:= ["A", "C"]).
+	write("A", "record1", Db),
+	write("B", "record2", Db),
+	write("C", "record1", Db),
+	?assert(match("record1", Db) =:= ["A", "C"]).

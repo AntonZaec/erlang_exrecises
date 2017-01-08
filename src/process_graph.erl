@@ -2,12 +2,13 @@
 -export([create/2, search_components/1]).
 -include_lib("eunit/include/eunit.hrl").
 
-
+%% Function creates graph of VertexNum processes with passed 
+%% probability of connection between two processes.
 create(VertexNum, ConnectionProbability) ->
 	Procs = create_processes(VertexNum, []),
 	create_edges(Procs, Procs, ConnectionProbability),
 	Procs.
-
+%% Function search and return connected components at passed graph.
 search_components(Vertexes) ->
 	search_components_impl(Vertexes, []).
 
@@ -110,7 +111,7 @@ linked_graph_test() ->
 	[H|T] = search_components(G),
 	?assert(length(T) =:= 0),
 	?assert(lists:sort(H) =:= lists:sort(G)).
-	
+
 base_test() ->
 	Procs = create_processes(10, []),
 	[V0, V1, V2, V3, V4, V5, V6, V7, V8, V9] = Procs,

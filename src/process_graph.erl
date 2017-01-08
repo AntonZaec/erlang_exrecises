@@ -2,6 +2,7 @@
 -export([create/2, search_components/1]).
 -include_lib("eunit/include/eunit.hrl").
 
+
 create(VertexNum, ConnectionProbability) ->
 	Procs = create_processes(VertexNum, []),
 	create_edges(Procs, Procs, ConnectionProbability),
@@ -104,6 +105,12 @@ unlinked_graph_test() ->
 	Components = search_components(G),
 	?assert(lists:sort(lists:append(Components)) =:= lists:sort(G)).
 
+linked_graph_test() ->
+	G = create(100, 1),
+	[H|T] = search_components(G),
+	?assert(length(T) =:= 0),
+	?assert(lists:sort(H) =:= lists:sort(G)).
+	
 base_test() ->
 	Procs = create_processes(10, []),
 	[V0, V1, V2, V3, V4, V5, V6, V7, V8, V9] = Procs,

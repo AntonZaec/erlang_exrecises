@@ -1,13 +1,17 @@
 -module(observer).
 -export([create/1, fire/2, add_handler/3]).
 
+%% Function create observer with implementation in module Module.
+%% See example in mouse_observer.erl
 create(Module) ->
 	{observer, spawn(fun() -> loop(Module, maps:new()) end)}.
-
+%% Function register Callback for processing Event.
+%% See example in mouse_observer.erl
 add_handler({observer, ObsPid}, Event, Callback) ->
 	ObsPid ! {add_handler_act, Event, Callback},
 	ok.
-
+%% Function trigger Event.
+%% See example in mouse.erl
 fire({observer, ObsPid}, Event) ->
 	ObsPid ! {fire_act, Event},
 	ok.

@@ -24,3 +24,12 @@ HOMEWORK III
 ---
 
 - mysupervisor.erl
+
+HOMEWORK IV (monday 16.01.2017)
+---
+
+- mouse.erl
+- mouse_observer.erl
+- mouse_test.erl
+- observer.erl
+

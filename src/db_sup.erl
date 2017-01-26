@@ -6,7 +6,7 @@
 start_link(DbNum) ->
 	{ok, SupPid} = supervisor:start_link(db_sup, []),
 	start_every_child(DbNum, SupPid),
-	SupPid.
+	{ok, SupPid}.
 
 init(_Args) ->
 	SupFlags = #{strategy => simple_one_for_one, intensity => 1, period => 5},

@@ -3,34 +3,28 @@
 -export([new/0, destroy/1, write/3, delete/2, read/2, match/2]).
 -export([init/1, handle_call/3, terminate/2]).
 
-new() ->
-	{ok, ServerPid} = gen_server:start_link(db_server, [], []),
-	{db, ServerPid}.
-
 init(_Args) ->
 	{ok, create_db_state()}.
 
 terminate(_Reason, _State) ->
 	ok.
 
-destroy(Db) -> 
-	{db, SrvPid} = Db,
+new() ->
+	gen_server:start_link(db_server, [], []).
+
+destroy(SrvPid) -> 
 	gen_server:call(SrvPid, {destroy_action}).
 
-write(Key, Element, Db) -> 
-	{db, SrvPid} = Db,
+write(Key, Element, SrvPid) -> 
 	gen_server:call(SrvPid, {write_action, Key, Element}).
 
-delete(Key, Db) -> 
-	{db, SrvPid} = Db,
+delete(Key, SrvPid) -> 
 	gen_server:call(SrvPid, {delete_action, Key}).
 
-read(Key, Db) -> 
-	{db, SrvPid} = Db,
+read(Key, SrvPid) -> 
 	gen_server:call(SrvPid, {read_action, Key}).
 
-match(Element, Db) -> 
-	{db, SrvPid} = Db,
+match(Element, SrvPid) -> 
 	gen_server:call(SrvPid, {match_action, Element}).
 
 handle_call(Action, _From, DbState) ->

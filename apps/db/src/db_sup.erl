@@ -1,11 +1,11 @@
 -module(db_sup).
 -behaviour(supervisor).
--export([start_link/1]).
+-export([start_link/0]).
 -export([init/1]).
 
-start_link(DbNum) ->
+start_link() ->
 	{ok, SupPid} = supervisor:start_link(db_sup, []),
-	start_every_child(DbNum, SupPid),
+	start_every_child(0, SupPid),
 	{ok, SupPid}.
 
 init(_Args) ->
@@ -13,7 +13,7 @@ init(_Args) ->
 	ChildSpec = [
 		#{
 			id => db_instance,
-			start => {db_server, new, []},
+			start => {db_server, start_link, []},
 			restart => transient,
             shutdown => 100,
 			type => worker,

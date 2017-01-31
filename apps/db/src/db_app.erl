@@ -2,8 +2,8 @@
 -behaviour(application).
 -export([start/2, stop/1]).
 
-start(_State, DbNum) ->
-	db_sup:start_link(DbNum).
+start(_State, _Args) ->
+	db_sup:start_link().
 
 stop(_State) ->
 	ok.

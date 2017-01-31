@@ -1,74 +1,88 @@
 -module(db_server).
 -behaviour(gen_server).
--export([new/0, destroy/1, write/3, delete/2, read/2, match/2]).
+-export([new/1, start_link/1, destroy/1, write/3, delete/2, read/2, match/2, count_keys/1, avg/1]).
 -export([init/1, handle_call/3, terminate/2]).
 
-init(_Args) ->
-	{ok, create_db_state()}.
-
-terminate(_Reason, _State) ->
-	ok.
-
-new() ->
-	gen_server:start_link(db_server, [], []).
-
-destroy(SrvPid) -> 
+%% Create database with name Name
+new(Name) ->
+	{ok, ServerPid} = gen_server:start_link(db_server, Name, []),
+	TableId = gen_server:call(ServerPid, {get_table_id}),
+	{ServerPid, TableId}.
+%% For calling by supervisor
+start_link(Name) ->
+	{ServerPid, _} = new(Name),
+	{ok, ServerPid}.
+%% Clear database
+destroy(Db) ->
+	{SrvPid, _} = Db, 
 	gen_server:call(SrvPid, {destroy_action}).
 
-write(Key, Element, SrvPid) -> 
+write(Key, Element, Db) -> 
+	{SrvPid, _} = Db, 
 	gen_server:call(SrvPid, {write_action, Key, Element}).
 
-delete(Key, SrvPid) -> 
+delete(Key, Db) -> 
+	{SrvPid, _} = Db, 
 	gen_server:call(SrvPid, {delete_action, Key}).
 
-read(Key, SrvPid) -> 
-	gen_server:call(SrvPid, {read_action, Key}).
-
-match(Element, SrvPid) -> 
+read(Key, Db) -> 
+	{_, TableId} = Db, 
+	%% We don't call gen_server:call for concurrent data reading
+	case ets:lookup(TableId, Key) of
+		[{Key, Element}] -> {ok, Element};
+		[] -> {error, instance}
+	end.
+%% Return all keys with value equal to Element
+match(Element, Db) -> 
+	{SrvPid, _} = Db, 
 	gen_server:call(SrvPid, {match_action, Element}).
+%% Count key in storage
+count_keys(Db) ->
+	{SrvPid, _} = Db, 
+	gen_server:call(SrvPid, {count_keys}).
+%% Compute average of all numeric keys
+avg(Db) ->
+	{SrvPid, _} = Db, 
+	gen_server:call(SrvPid, {average}).
 
-handle_call(Action, _From, DbState) ->
-	{Reply, NewDbState} = case Action of
-		{write_action, Key, Element} -> 
-			{ok, write_private(Key, Element, DbState)};
-		{read_action, Key} -> 
-			{read_private(Key, DbState), DbState};
-		{delete_action, Key} -> 
-			{ok, delete_private(Key, DbState)};
-		{match_action, Element} -> 
-			{match_private(Element, DbState), DbState};
-		{destroy_action} -> 
-			{ok, []}
-	end,
-	{reply, Reply, NewDbState}.
-
-create_db_state() ->
-	[].
-
-write_private(Key, Element, []) -> [{Key, Element}];
-write_private(Key, Element, [{HeadKey, HeadElement}|T]) when Key > HeadKey ->
-	[{HeadKey, HeadElement}|write_private(Key, Element, T)];
-write_private(Key, Element, [{HeadKey, _HeadElement}|T]) when Key =:= HeadKey ->
-	[{Key, Element}|T];
-write_private(Key, Element, [{HeadKey, HeadElement}|T]) when Key < HeadKey ->
-	[{Key, Element}|[{HeadKey, HeadElement}|T]].
-
-delete_private(_, []) -> [];
-delete_private(Key, [{HeadKey, HeadElement}|T]) when Key > HeadKey ->
-	[{HeadKey, HeadElement}|delete_private(Key, T)];
-delete_private(Key, [{HeadKey, _HeadElement}|T]) when Key =:= HeadKey ->
-	T;
-delete_private(Key, [{HeadKey, HeadElement}|T]) when Key < HeadKey ->
-	[{HeadKey, HeadElement}|T].
-
-read_private(Key, [{HeadKey, HeadElement}|_T]) when Key =:= HeadKey ->
-	{ok, HeadElement};
-read_private(Key, [{HeadKey, _HeadElement}|T]) when Key > HeadKey ->
-	read_private(Key, T);
-read_private(_Key, _) -> {error, instance}.
-
-match_private(Element, [{HeadKey, HeadElement}|T]) when Element =:= HeadElement ->
-	[HeadKey|match_private(Element, T)];
-match_private(Element, [{_HeadKey, HeadElement}|T]) when Element =/= HeadElement ->
-	match_private(Element, T);
-match_private(_Element, []) -> [].
+%% Callback for gen_server
+init(Name) ->
+	{ok, create_db_state(Name)}.
+%% Callback for gen_server
+terminate(_Reason, _State) ->
+	ok.
+%% Callbacks for gen_server
+handle_call({write_action, Key, Element}, _From, TableId) ->
+	ets:insert(TableId, {Key, Element}),
+	{reply, ok, TableId};
+handle_call({delete_action, Key}, _From, TableId) ->
+	ets:delete(TableId, Key),
+	{reply, ok, TableId};
+handle_call({match_action, Element}, _From, TableId) ->
+	Matches = ets:foldl(fun({Key, Value}, Acc) -> 
+		if 
+			Value =:= Element -> [Key|Acc]; 
+			true -> Acc
+		end
+	end, [], TableId),
+	{reply, Matches, TableId};
+handle_call({destroy_action}, _From, TableId) ->
+	TableName = ets:info(TableId, name),
+	ets:delete(TableId),
+	{reply, ok, create_db_state(TableName)};
+handle_call({count_keys}, _From, TableId) ->
+	Size = ets:info(TableId, size),
+	{reply, Size, TableId};
+handle_call({average}, _From, TableId) -> 
+	{Sum, Total} = ets:foldl(fun({Key, _}, Acc) -> 
+		{CurSum, CurTotal} = Acc,
+		if 
+			is_number(Key) -> {CurSum + Key, CurTotal + 1}; 
+			true -> Acc
+		end
+	end, {0, 0}, TableId),
+	{reply, Sum/Total, TableId};
+handle_call({get_table_id}, _From, TableId) ->
+	{reply, TableId, TableId}.
+create_db_state(Name) ->
+	ets:new(Name, [set, protected, {read_concurrency, true}, named_table]).

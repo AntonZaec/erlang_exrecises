@@ -2,8 +2,8 @@
 -export([create/1, click/1, dblclick/1, move/1]).
 %% Function create observed mouse
 %% See example in mouse_test.erl
-create(Observer) ->
-	{mouse, spawn(fun()-> loop(Observer) end)}.
+create(Module) ->
+	{mouse, spawn(fun()-> loop(Module, Module:create()) end)}.
 %% See example in mouse_test.erl
 click({mouse, Pid}) ->
 	rpc(click, Pid).
@@ -14,16 +14,16 @@ dblclick({mouse, Pid}) ->
 move({mouse, Pid}) ->
 	rpc(move, Pid).
 
-loop(Observer) ->
+loop(Module, Observer) ->
 	receive
 		{click, Ref, Pid} -> 
-			Pid ! {Ref, observer:fire(Observer, 'MouseClickEvent')};
+			Pid ! {Ref, Module:fire(Observer, 'MouseClickEvent')};
 		{dblclick, Ref, Pid} -> 
-			Pid ! {Ref, observer:fire(Observer, 'MouseDoubleClickEvent')};
+			Pid ! {Ref, Module:fire(Observer, 'MouseDoubleClickEvent')};
 		{move, Ref, Pid} -> 
-			Pid ! {Ref, observer:fire(Observer, 'MouseMoveEvent')}
+			Pid ! {Ref, Module:fire(Observer, 'MouseMoveEvent')}
 	end,
-	loop(Observer).
+	loop(Module, Observer).
 
 rpc(Action, Pid) ->
 	Ref = make_ref(),

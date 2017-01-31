@@ -1,5 +1,5 @@
 -module(mouse_observer).
--export([create/0, click/1, dblclick/1]).
+-export([create/0, click/1, dblclick/1, fire/2]).
 %% Function create observer for mouse's actions.
 %% See example in mouse_test.erl
 create() ->
@@ -14,4 +14,5 @@ click(Event) ->
 dblclick(Event) ->
 	io:format("Double click event ~p was catched.~n", [Event]).
 
-
+fire(Observer, Event) ->
+	observer:fire(Observer, Event).

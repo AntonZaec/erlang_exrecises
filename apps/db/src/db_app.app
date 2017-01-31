@@ -1,1 +1,1 @@
-{application, db_app, [{mod, {db_app, 10}}]}.
+{application, db_app, [{mod, {db_app, 10}}, {vsn, "1.0.0"}]}.

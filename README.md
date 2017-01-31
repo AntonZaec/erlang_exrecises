@@ -25,6 +25,10 @@ HOMEWORK III
 
 - modules/mysupervisor.erl
 
+LAZY LISTS
+---
+- modules/lazy_fib.erl
+
 HOMEWORK IV (monday 16.01.2017)
 ---
 

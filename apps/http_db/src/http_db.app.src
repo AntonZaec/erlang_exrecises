@@ -1,0 +1,17 @@
+{application, http_db,
+ [{description, "Distributed key-value storage with REST interface"},
+  {vsn, "1.0.0"},
+  {registered, [http_db]},
+  {mod, { http_db_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    cowboy
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {maintainers, []},
+  {licenses, []},
+  {links, []}
+ ]}.

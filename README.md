@@ -25,11 +25,16 @@ HOMEWORK III
 
 - modules/mysupervisor.erl
 
+LAZY LISTS
+---
+- modules/lazy_fib.erl
+
 HOMEWORK IV (monday 16.01.2017)
 ---
 
 - modules/mouse.erl
 - modules/mouse_observer.erl
+- modules/mouse_observer2.erl
 - modules/mouse_test.erl
 - modules/observer.erl
 

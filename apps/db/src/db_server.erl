@@ -1,6 +1,8 @@
 -module(db_server).
 -behaviour(gen_server).
--export([new/1, start_link/1, destroy/1, write/3, delete/2, read/2, match/2, count_keys/1, avg/1]).
+-export([new/1, start_link/1, destroy/1, write/3, delete/2, 
+		read/2, match/2, count_keys/1, avg/1,
+		get_name/1, convert_pid/1, convert_pid/2]).
 -export([init/1, handle_call/3, terminate/2]).
 
 %% Create database with name Name
@@ -44,6 +46,14 @@ count_keys(Db) ->
 avg(Db) ->
 	{SrvPid, _} = Db, 
 	gen_server:call(SrvPid, {average}).
+%% Return database name
+get_name(SrvPid) ->
+	gen_server:call(SrvPid, {get_table_id}).
+%% Create database object from pid
+convert_pid(DbPid) ->
+	{DbPid, get_name(DbPid)}.
+convert_pid(DbPid, DbName) ->
+	{DbPid, DbName}.
 
 %% Callback for gen_server
 init(Name) ->
@@ -84,5 +94,6 @@ handle_call({average}, _From, TableId) ->
 	{reply, Sum/Total, TableId};
 handle_call({get_table_id}, _From, TableId) ->
 	{reply, TableId, TableId}.
+
 create_db_state(Name) ->
 	ets:new(Name, [set, protected, {read_concurrency, true}, named_table]).

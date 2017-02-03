@@ -1,8 +1,8 @@
 -module(db_handler).
 -export([init/2, allowed_methods/2, 
-	content_types_provided/2, db_to_json/2,
-	is_conflict/2, content_types_accepted/2, 
-	create_database/2, delete_resource/2, where_is_not_db/2]).
+	resource_exists/2, content_types_provided/2, db_to_json/2,
+	is_conflict/2, content_types_accepted/2, create_database/2, 
+	delete_resource/2]).
 
 init(Req, Opts) ->
 	{cowboy_rest, Req, Opts}.
@@ -13,6 +13,11 @@ allowed_methods(Req, State) ->
 %%====================================================================
 %% GET
 %%====================================================================
+resource_exists(Req, State) ->
+	Hosts = get_hosts(),
+	DbName = get_db_name(Req),
+	{is_db_everywhere(DbName, Hosts), Req, State}.
+
 content_types_provided(Req, State) ->
 	{[{<<"application/json">>, db_to_json}], Req, State}.
 
@@ -28,14 +33,7 @@ db_to_json(Req, State) ->
 is_conflict(Req, State) -> 
 	Hosts = get_hosts(),
 	DbName = get_db_name(Req),
-	HostsWithoutDb = where_is_not_db(DbName, Hosts),
-	Result = if 
-		length(HostsWithoutDb) == 0 ->
-			true;
-		true -> 
-			false
-	end,
-	{Result, Req, State}.
+	{is_db_everywhere(DbName, Hosts), Req, State}.
 
 content_types_accepted(Req, State) -> 
 	ContentType = cowboy_req:header(<<"content-type">>, Req),
@@ -105,3 +103,7 @@ where_is_not_db(DbName, [Host|T]) ->
 		IsDbOnHost -> where_is_not_db(DbName, T);
 		true -> [Host|where_is_not_db(DbName, T)]
 	end.
+
+is_db_everywhere(DbName, Hosts) ->
+	HostsWithoutDb = where_is_not_db(DbName, Hosts),
+	length(HostsWithoutDb) == 0.

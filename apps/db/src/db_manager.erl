@@ -1,12 +1,15 @@
 -module(db_manager).
--export([get_database/1, create_database/1, is_exists/1, remove_database/1, do/2]).
+-export([init/0, get_database/1, create_database/1, is_exists/1, remove_database/1, do/2]).
 
+%% Must be called from application initialization
+init() ->
+	ets:new(db_object_cache, [set, public, named_table]),
+	ok.
 %% Execute Fun(Db) and return result
 %% Use this function for reducing calling via network
 do(DbName, Fun) ->
 	{ok, Db} = get_database(DbName),
 	Fun(Db).
-
 %% Check database existing
 is_exists(DbName) ->
 	case get_database(DbName) of
@@ -16,8 +19,19 @@ is_exists(DbName) ->
 %% Find database with passed name.
 %% Return {ok, Db} or {error, Reason}.
 get_database(DbName) ->
-	Childs = supervisor:which_children(db_sup),
-	find_db(Childs, DbName).
+	%% We can register each db process by name DbName,
+	%% but I think it is bad idea. I decided to use cache.
+	case get_database_from_cache(DbName) of
+		{ok, Db} -> {ok, Db};
+		{error, not_cached} ->
+			Childs = supervisor:which_children(db_sup),
+			Res = find_db(Childs, DbName),
+			case Res of
+				{ok, Db} -> add_to_cache(DbName, Db);
+				_ -> ok
+			end,
+			Res
+	end.
 %% Create supervised database with name DbName.
 %% Return {ok, Db} or {error, Reason}.
 create_database(DbName) ->
@@ -50,4 +64,21 @@ find_db([{_, DbPid, _, _}|T], DbName) ->
 	case db_server:get_name(DbPid) of 
 		DbName -> {ok, db_server:convert_pid(DbPid, DbName)};
 		_ -> find_db(T, DbName)
+	end.
+
+get_database_from_cache(DbName) ->
+	case ets:lookup(db_object_cache, DbName) of 
+		[{DbName, Db}] -> {ok, Db};
+		[] -> {error, not_cached}
+	end.
+
+add_to_cache(DbName, Db) ->
+	ets:insert(db_object_cache, {DbName, Db}),
+	spawn(fun() -> protect_cache(db_server:get_pid(Db), DbName) end).
+
+protect_cache(DbPid, DbName) ->
+	process_flag(trap_exit, true),
+	MonRef = monitor(process, DbPid),
+	receive
+		{_Tag, MonRef, _Type, _Object, _Info} -> ets:delete(db_object_cache, DbName)
 	end.

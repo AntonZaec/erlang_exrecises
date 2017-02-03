@@ -1,14 +1,14 @@
 {application, http_db,
  [{description, "Distributed key-value storage with REST interface"},
   {vsn, "1.0.0"},
-  {registered, [http_db]},
+  {registered, []},
   {mod, { http_db_app, []}},
   {applications,
    [kernel,
     stdlib,
     cowboy
    ]},
-  {env,[]},
+  {env,[{cluster, ['host1@127.0.0.1', 'host2@127.0.0.1']}]},
   {modules, []},
 
   {maintainers, []},

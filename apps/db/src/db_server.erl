@@ -1,8 +1,8 @@
 -module(db_server).
 -behaviour(gen_server).
 -export([new/1, start_link/1, destroy/1, write/3, delete/2, 
-		read/2, match/2, count_keys/1, avg/1,
-		get_name/1, convert_pid/1, convert_pid/2]).
+		read/2, read_all/1, match/2, count_keys/1, avg/1,
+		get_name/1, convert_pid/1, convert_pid/2, get_pid/1]).
 -export([init/1, handle_call/3, terminate/2]).
 
 %% Create database with name Name
@@ -34,6 +34,11 @@ read(Key, Db) ->
 		[{Key, Element}] -> {ok, Element};
 		[] -> {error, instance}
 	end.
+
+read_all(Db) ->
+	{_, TableId} = Db, 
+	%% We don't call gen_server:call for concurrent data reading
+	ets:foldl(fun(El, Acc) -> [El|Acc] end, [], TableId).
 %% Return all keys with value equal to Element
 match(Element, Db) -> 
 	{SrvPid, _} = Db, 
@@ -54,7 +59,10 @@ convert_pid(DbPid) ->
 	{DbPid, get_name(DbPid)}.
 convert_pid(DbPid, DbName) ->
 	{DbPid, DbName}.
-
+%% Return pid by database object
+get_pid(Db) ->
+	{DbPid, _} = Db,
+	DbPid.
 %% Callback for gen_server
 init(Name) ->
 	{ok, create_db_state(Name)}.

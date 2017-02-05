@@ -54,6 +54,12 @@ remove_database(DbName) ->
 		{error, not_exists} -> 
 			ok
 	end.
+%% Return list of databases with numbers of elements
+%% For example, [{db1, 100}, {db2, 150}, ...]
+info() ->
+	ets:foldl(fun({DbName, Db}, Acc) -> 
+		[{DbName, db_server:count_keys(Db)}|Acc] end, [], db_object_cache).
+
 
 find_db([], _DbName) ->
 	{error, not_exists};

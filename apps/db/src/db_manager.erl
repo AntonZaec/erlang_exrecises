@@ -25,7 +25,7 @@ get_database(DbName) ->
 	case get_database_from_cache(DbName) of
 		{ok, Db} -> {ok, Db};
 		{error, not_cached} ->
-			Childs = supervisor:which_children(db_sup),
+			Childs = supervisor:which_children(kvdb),
 			Res = find_db(Childs, DbName),
 			case Res of
 				{ok, Db} -> add_to_cache(DbName, Db);
@@ -38,7 +38,7 @@ get_database(DbName) ->
 create_database(DbName) ->
 	case get_database(DbName) of 
 		{error, not_exists} -> 
-			case supervisor:start_child(db_sup, [DbName]) of
+			case supervisor:start_child(kvdb, [DbName]) of
 				{ok, DbPid} -> {ok, db_server:convert_pid(DbPid, DbName)};
 				{error, Error} -> {error, Error}
 			end;
@@ -49,7 +49,7 @@ remove_database(DbName) ->
 	case get_database(DbName) of
 		{ok, Db} -> 
 			db_server:destroy(Db),
-			ok = supervisor:terminate_child(db_sup, db_server:get_pid(Db)),
+			ok = supervisor:terminate_child(kvdb, db_server:get_pid(Db)),
 			ok;
 		{error, not_exists} -> 
 			ok

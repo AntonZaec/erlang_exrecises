@@ -4,7 +4,7 @@
 -export([init/1]).
 
 start_link() ->
-	supervisor:start_link({local, db_sup}, db_sup, []).
+	supervisor:start_link({local, kvdb}, ?MODULE, []).
 
 init(_Args) ->
 	SupFlags = #{strategy => simple_one_for_one, intensity => 1, period => 5},

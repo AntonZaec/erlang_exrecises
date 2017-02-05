@@ -17,10 +17,9 @@
 start(_StartType, _StartArgs) ->
 	Dispatch = cowboy_router:compile([{
 		'_', [
-			%TODO: Implement handlers below
+			%TODO: Create API for list of databases
 			{"/http_db/:db_name/:key", key_value_handler, []},
 			{"/http_db/:db_name/", db_handler, []},
-			%{"/http_db/list/", db_list_handler, []},
 			{"/http_db/", cowboy_static, {priv_file, http_db, "static/index.htm"}}]}]),
 	{ok, _} = cowboy:start_clear(
 		http_db_listener, 

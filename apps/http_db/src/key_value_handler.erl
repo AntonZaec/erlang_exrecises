@@ -57,7 +57,6 @@ content_types_accepted(Req, State) ->
 	{[{<<"application/json">>, write}], Req, State}.
 
 write(Req, State) ->
-	io:format("~p~n", [State]),
 	case req_helper:get_record(Req) of
 		{error, wrong_json} -> {false, Req, State};
 		{ok, Value} -> 

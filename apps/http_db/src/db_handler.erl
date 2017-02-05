@@ -1,29 +1,32 @@
 -module(db_handler).
--export([init/2, allowed_methods/2, 
-	resource_exists/2, content_types_provided/2, db_to_json/2,
+-export([
+	init/2, allowed_methods/2, resource_exists/2, 
+	content_types_provided/2, db_to_json/2,
 	is_conflict/2, content_types_accepted/2, create_database/2, 
 	delete_resource/2]).
 
+%%====================================================================
+%% ALL
+%%====================================================================
 init(Req, Opts) ->
 	{cowboy_rest, Req, Opts}.
 
 allowed_methods(Req, State) -> 
 	{[<<"GET">>, <<"PUT">>, <<"DELETE">>], Req, State}.
 
+resource_exists(Req, State) ->
+	Hosts = cluster:get_hosts(),
+	DbName = req_helper:get_db_name(Req),
+	{cluster:is_db_everywhere(DbName, Hosts), Req, State}.
 %%====================================================================
 %% GET
 %%====================================================================
-resource_exists(Req, State) ->
-	Hosts = get_hosts(),
-	DbName = get_db_name(Req),
-	{is_db_everywhere(DbName, Hosts), Req, State}.
-
 content_types_provided(Req, State) ->
 	{[{<<"application/json">>, db_to_json}], Req, State}.
 
 db_to_json(Req, State) ->
-	DbName = get_db_name(Req),
-	Hosts = get_hosts(),
+	DbName = req_helper:get_db_name(Req),
+	Hosts = cluster:get_hosts(),
 	DbData = read_db(DbName, Hosts, []),
 	{convert_db_data_to_json(DbData), Req, State}.
 
@@ -31,17 +34,17 @@ db_to_json(Req, State) ->
 %% PUT
 %%====================================================================
 is_conflict(Req, State) -> 
-	Hosts = get_hosts(),
-	DbName = get_db_name(Req),
-	{is_db_everywhere(DbName, Hosts), Req, State}.
+	Hosts = cluster:get_hosts(),
+	DbName = req_helper:get_db_name(Req),
+	{cluster:is_db_everywhere(DbName, Hosts), Req, State}.
 
 content_types_accepted(Req, State) -> 
 	ContentType = cowboy_req:header(<<"content-type">>, Req),
 	{[{ContentType, create_database}], Req, State}.
 
 create_database(Req, State) ->
-	DbName = get_db_name(Req),
-	Hosts = get_hosts(),
+	DbName = req_helper:get_db_name(Req),
+	Hosts = cluster:get_hosts(),
 	create_db_on_hosts(DbName, Hosts),
 	{true, Req, State}.
 
@@ -49,25 +52,19 @@ create_database(Req, State) ->
 %% DELETE
 %%====================================================================
 delete_resource(Req, State) ->
-	DbName = get_db_name(Req),
-	Hosts = get_hosts(),
+	DbName = req_helper:get_db_name(Req),
+	Hosts = cluster:get_hosts(),
 	remove_db_on_hosts(DbName, Hosts),
 	{true, Req, State}.
 
 %%====================================================================
 %% Internal functions
 %%====================================================================
-get_db_name(Req) ->
-	list_to_atom(bitstring_to_list(cowboy_req:binding(db_name, Req))).
-get_hosts() ->
-	{ok, Hosts} = application:get_env(http_db, cluster),
-	Hosts.
-
 read_db(_DbName, [], Acc) ->
 	Acc;
 read_db(DbName, [Host|T], Acc) ->
 	DataFromHost = rpc:call(
-		Host, db_manager, do, [DbName, fun db_server:read_all/1]),
+		Host, db_manager, do, [DbName, fun db_server:read_all/1, [db]]),
 	%% It will be dangerous if there is a lot of data in database
 	%% TODO: Rewrite it
 	read_db(DbName, T, lists:append(Acc, DataFromHost)).
@@ -94,16 +91,3 @@ create_db_on_hosts(DbName, [Host|T]) ->
 		{error, Reason} -> throw({create_db_error, Host, Reason})
 	end,
 	create_db_on_hosts(DbName, T).
-
-where_is_not_db(_DbName, []) ->
-	[];
-where_is_not_db(DbName, [Host|T]) ->
-	IsDbOnHost = rpc:call(Host, db_manager, is_exists, [DbName]),
-	if 
-		IsDbOnHost -> where_is_not_db(DbName, T);
-		true -> [Host|where_is_not_db(DbName, T)]
-	end.
-
-is_db_everywhere(DbName, Hosts) ->
-	HostsWithoutDb = where_is_not_db(DbName, Hosts),
-	length(HostsWithoutDb) == 0.

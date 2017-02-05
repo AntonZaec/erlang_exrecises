@@ -1,5 +1,5 @@
 -module(db_manager).
--export([init/0, get_database/1, create_database/1, is_exists/1, remove_database/1, do/2]).
+-export([init/0, get_database/1, create_database/1, is_exists/1, remove_database/1, do/3]).
 
 %% Must be called from application initialization
 init() ->
@@ -7,9 +7,10 @@ init() ->
 	ok.
 %% Execute Fun(Db) and return result
 %% Use this function for reducing calling via network
-do(DbName, Fun) ->
+do(DbName, Fun, Args) ->
 	{ok, Db} = get_database(DbName),
-	Fun(Db).
+	RealArgs = lists:map(fun(db) -> Db; (El) -> El end, Args),
+	apply(Fun, RealArgs).
 %% Check database existing
 is_exists(DbName) ->
 	case get_database(DbName) of

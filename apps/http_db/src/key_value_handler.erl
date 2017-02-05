@@ -2,7 +2,8 @@
 -export([
 	init/2, allowed_methods/2, malformed_request/2, resource_exists/2,
 	content_types_provided/2, read/2,
-	valid_content_headers/2, is_conflict/2, content_types_accepted/2, write/2]).
+	valid_content_headers/2, is_conflict/2, content_types_accepted/2, write/2,
+	delete_resource/2]).
 
 %%====================================================================
 %% ALL
@@ -18,7 +19,10 @@ malformed_request(Req, State) ->
 	DbName = req_helper:get_db_name(Req),
 	{not cluster:is_db_everywhere(DbName, Hosts), Req, State}.
 
-resource_exists(Req=#{method := <<"GET">>}, State) ->
+resource_exists(Req=#{method := <<"PUT">>}, State) ->
+	%% It is not matter
+	{true, Req, State};
+resource_exists(Req, State) ->
 	DbName = req_helper:get_db_name(Req),
 	Hosts = cluster:get_hosts(),
 	Key = req_helper:get_record_key(Req),
@@ -26,17 +30,14 @@ resource_exists(Req=#{method := <<"GET">>}, State) ->
 	case read_key_value(TargetHost, DbName, Key) of
 		{ok, Value} -> {true, Req, {value, Value}};
 		{error, instance} -> {false, Req, State}
-	end;
-resource_exists(Req=#{method := <<"PUT">>}, State) ->
-	%% It is not matter
-	{true, Req, State}.
+	end.
 
-valid_content_headers(Req=#{method := <<"GET">>}, State) ->
-	{true, Req, State};
 valid_content_headers(Req=#{method := <<"PUT">>}, State) ->
 	IsContentTypeValid = cowboy_req:header(
 		<<"content-type">>, Req) == <<"application/json">>,
-	{IsContentTypeValid, Req, State}.
+	{IsContentTypeValid, Req, State};
+valid_content_headers(Req, State) ->
+	{true, Req, State}.
 %%====================================================================
 %% GET
 %%====================================================================
@@ -71,15 +72,22 @@ write(Req, State) ->
 %%====================================================================
 %% DELETE
 %%====================================================================
-%delete_resource(Req, State) ->
-%	DbName = get_db_name(Req),
-%	Hosts = get_hosts(),
-%	remove_db_on_hosts(DbName, Hosts),
-%	{true, Req, State}.
+delete_resource(Req, State) ->
+	DbName = req_helper:get_db_name(Req),
+	Key = req_helper:get_record_key(Req),
+	Hosts = cluster:get_hosts(),
+	TargetHost = select_host_for_key(Key, Hosts),
+	remove_record(TargetHost, DbName, Key),
+	{true, Req, State}.
 
 %%====================================================================
 %% Internal functions
 %%====================================================================
+remove_record(TargetHost, DbName, Key) ->
+	rpc:call(TargetHost, db_manager, do, [
+		DbName, fun db_server:delete/2, [Key, db]]),
+	ok.
+
 record_to_json(Value) ->
 	jiffy:encode({[{value, Value}]}).
 

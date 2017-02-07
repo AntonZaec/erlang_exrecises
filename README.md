@@ -42,3 +42,7 @@ HOMEWORK V
 ---
 
 - apps/db
+
+FINAL PROJECT
+---
+- [apps/http_db](https://github.com/AntonZaec/erlang_exrecises/tree/master/apps/http_db)

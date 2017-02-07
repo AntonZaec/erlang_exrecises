@@ -18,7 +18,6 @@ Start http_db with commands:
 rebar3 shell
 net_kernel:start(['host3@127.0.0.1', longnames]). 
 application:start(http_db).
-application:start(http_db).
 ```
 
 Now you can open `http://127.0.0.1:8080/http_db` and you will see hello page.

@@ -50,36 +50,95 @@ Result:
 
 HOMEWORK II
 ---
+Tasks:
 
-- modules/db.erl
-- modules/test_db.erl
-- modules/process_ring.erl
-- modules/process_graph.erl
-- modules/process_game.erl
+1. Change code of database from previous homework. Database must work in separated process. The function *write* must return tuple `{error, Reason}` if process died.
+2. Create ring of processess. Some sent message must move through ring M times.
+3. Create graph of processes and implement finding of connected component on this graph.
+4. Create a lottery between processes. The processes must select one "best of the best" process.
+
+Result:
+
+|Task|File|
+|---|---|
+|1|[modules/db.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/db.erl)|
+|2|[modules/process_ring.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/process_ring.erl)|
+|3|[modules/process_graph.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/process_graph.erl)|
+|4|[modules/process_game.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/process_game.erl)|
 
 HOMEWORK III
 ---
 
-- modules/mysupervisor.erl
+Task:
+
+1. Create your own supervisor.
+
+Result:
+
+1. [modules/mysupervisor.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/mysupervisor.erl)
 
 LAZY LISTS
 ---
-- modules/lazy_fib.erl
+
+Task:
+
+1. Create any lazy list.
+
+Result:
+
+1. [modules/lazy_fib.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/lazy_fib.erl)
+
 
 HOMEWORK IV (monday 16.01.2017)
 ---
 
-- modules/mouse.erl
-- modules/mouse_observer.erl
-- modules/mouse_observer2.erl
-- modules/mouse_test.erl
-- modules/observer.erl
+Tasks:
+
+1. Implement pattern observer with interface:
+`add_handler(Observer, Event, Callback). fire(Observer, Event).`
+2. Test it on some example.
+3. Do same things with gen_event.
+
+Result:
+
+|Task|File|
+|---|---|
+|1|[modules/observer.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/observer.erl)|
+|2|[modules/mouse_observer.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/mouse_observer.erl),[modules/mouse.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/mouse.erl),[modules/mouse_test.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/mouse_test.erl)|
+|3|[modules/mouse_observer2.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/mouse_observer2.erl),[modules/mouse_test.erl](https://github.com/AntonZaec/erlang_exrecises/blob/master/modules/mouse_test.erl)|
+
 
 HOMEWORK V
 ---
 
-- apps/db
+Task:
+
+1. Rewrite database module with gen_server.
+2. Implement supervisor for database using behaviour supervisor.
+3. Create application using behaviour application.
+ 
+Result:
+
+1. [apps/db](https://github.com/AntonZaec/erlang_exrecises/tree/master/apps/db).
+
+HOMEWORK VI
+---
+
+Task:
+
+1. Rewrite database module with ets tables instead of lists.
+
+Result:
+
+1. [apps/db](https://github.com/AntonZaec/erlang_exrecises/tree/master/apps/db/src/db_server.erl).
 
 FINAL PROJECT
 ---
-- [apps/http_db](https://github.com/AntonZaec/erlang_exrecises/tree/master/apps/http_db)
+
+Task:
+
+1. Create REST API for database.
+
+Result:
+
+1. [apps/http_db](https://github.com/AntonZaec/erlang_exrecises/tree/master/apps/http_db)

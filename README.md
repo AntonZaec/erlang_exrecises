@@ -1,4 +1,4 @@
-Homeworks which was completed while I was interning in Reksoft.
+Homeworks which was completed while I was being intern.
 
 HOMEWORK I
 ---
